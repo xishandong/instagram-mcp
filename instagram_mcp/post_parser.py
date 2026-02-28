@@ -23,38 +23,43 @@ def parse_html_post(html_content: str) -> Dict[str, Any]:
     if canonical and canonical.get('href'):
         post_url = canonical['href']
 
-    # Extract images - only from main post swiper-slide data-src attributes (high quality)
-    # Do NOT fallback to other img tags to avoid extracting user avatars, arrows, etc.
+    # Extract images and video
     images = []
+    video_url = None
 
-    # Primary method: get data-src from swiper-slide divs within the main .show container
-    # This avoids picking up images from the "More posts" recommendation section
     show_div = soup.find('div', class_='show')
     if show_div:
-        swiper_container = show_div.find('div', class_='swiper-container')
-        if swiper_container:
-            swiper_slides = swiper_container.find_all('div', class_='swiper-slide')
-            for slide in swiper_slides:
-                data_src = slide.get('data-src')
-                if data_src and 'base64' not in str(data_src):
-                    # Clean up the URL (remove HTML entities)
-                    clean_url = data_src.replace('&#38;', '&')
-                    images.append(clean_url)
-
-    # For video posts, there might be no images in swiper-slides, so we don't add any fallback
-    # This prevents extracting user avatars, arrow icons, and other unrelated images
-
-    # Extract video - look for video tags (though imginn seems to be image-only)
-    video_url = None
-    video_tag = soup.find('video')
-    if video_tag:
-        video_url = video_tag.get('src') or video_tag.get('data-src')
-        if video_url:
-            if video_url.startswith('//'):
-                video_url = 'https:' + video_url
-            elif video_url.startswith('/') and post_url:
-                from urllib.parse import urljoin
-                video_url = urljoin(post_url, video_url)
+        # Check if it's a video post (has video tag)
+        video_tag = show_div.find('video')
+        if video_tag:
+            video_url = video_tag.get('src') or video_tag.get('data-src')
+            if video_url:
+                if video_url.startswith('//'):
+                    video_url = 'https:' + video_url
+                elif video_url.startswith('/') and post_url:
+                    from urllib.parse import urljoin
+                    video_url = urljoin(post_url, video_url)
+        else:
+            # It's an image post
+            # Case 1: Multi-image post with swiper-container
+            swiper_container = show_div.find('div', class_='swiper-container')
+            if swiper_container:
+                swiper_slides = swiper_container.find_all('div', class_='swiper-slide')
+                for slide in swiper_slides:
+                    data_src = slide.get('data-src')
+                    if data_src and 'base64' not in str(data_src):
+                        # Clean up the URL (remove HTML entities)
+                        clean_url = data_src.replace('&#38;', '&')
+                        images.append(clean_url)
+            # Case 2: Single-image post with direct img tag in media-wrap
+            else:
+                media_wrap = show_div.find('div', class_='media-wrap')
+                if media_wrap:
+                    img_tag = media_wrap.find('img')
+                    if img_tag:
+                        src = img_tag.get('src')
+                        if src and 'base64' not in str(src) and 'lazy.jpg' not in src:
+                            images.append(src)
 
     # Extract likes and comments from post-stats div
     likes = 0
@@ -96,19 +101,54 @@ def parse_html_post(html_content: str) -> Dict[str, Any]:
 
     # Extract user info
     user_info = {}
-    username_elem = soup.find('div', class_='username')
-    if username_elem:
-        user_info['username'] = username_elem.get_text().strip().replace('@', '')
+    username_div = soup.find('div', class_='username')
+    if username_div:
+        h2_elem = username_div.find('h2')
+        if h2_elem:
+            user_info['username'] = h2_elem.get_text().strip().replace('@', '')
 
-    fullname_elem = soup.find('div', class_='fullname')
-    if fullname_elem:
-        user_info['fullname'] = fullname_elem.get_text().strip()
+    fullname_div = soup.find('div', class_='fullname')
+    if fullname_div:
+        h1_elem = fullname_div.find('h1')
+        if h1_elem:
+            user_info['fullname'] = h1_elem.get_text().strip()
 
     # User profile URL
     user_link = soup.find('a', href=re.compile(r'^/[^/]+/$'))
     if user_link and user_link.get('href'):
         user_profile_url = f"https://imginn.com{user_link['href']}"
         user_info['profile_url'] = user_profile_url
+
+    # Extract tagged users
+    tagged_users = []
+    tagged_users_div = soup.find('div', class_='tagged-users')
+    if tagged_users_div:
+        tagged_user_list = tagged_users_div.find('div', class_='tagged-user-list')
+        if tagged_user_list:
+            tagged_user_links = tagged_user_list.find_all('a', class_='tagged-user')
+            for link in tagged_user_links:
+                user_data = {}
+                # Extract username from href
+                href = link.get('href')
+                if href:
+                    # Extract username from /username/ format
+                    username_match = re.search(r'/([^/]+)/$', href)
+                    if username_match:
+                        user_data['username'] = username_match.group(1)
+                        user_data['profile_url'] = f"https://imginn.com{href}"
+
+                # Extract profile picture
+                img_tag = link.find('img')
+                if img_tag and img_tag.get('src'):
+                    user_data['profile_pic'] = img_tag['src']
+
+                # Extract display name
+                name_div = link.find('div', class_='name')
+                if name_div:
+                    user_data['display_name'] = name_div.get_text().strip()
+
+                if user_data:
+                    tagged_users.append(user_data)
 
     # Extract post content/caption
     post_content = ""
@@ -133,6 +173,7 @@ def parse_html_post(html_content: str) -> Dict[str, Any]:
         "likes": likes,
         "comments": comments,
         "user_info": user_info,
+        "tagged_users": tagged_users,
         "post_content": post_content,
         "timestamp": timestamp,
         "post_type": "video" if video_url else "image" if images else "unknown"
@@ -238,6 +279,25 @@ def parse_json_post(json_content: str) -> Dict[str, Any]:
         else:
             user_info['username'] = str(user_data)
 
+    # Extract tagged users
+    tagged_users = []
+    tagged_users_data = safe_get(data, 'tagged_users') or safe_get(data, 'taggedUsers') or safe_get(data, 'mentions')
+    if isinstance(tagged_users_data, list):
+        for user in tagged_users_data:
+            if isinstance(user, dict):
+                tagged_user = {}
+                tagged_user['username'] = safe_get(user, 'username') or safe_get(user, 'name') or safe_get(user,
+                                                                                                           'display_name')
+                tagged_user['display_name'] = safe_get(user, 'display_name') or safe_get(user,
+                                                                                         'full_name') or tagged_user.get(
+                    'username', '')
+                tagged_user['profile_url'] = safe_get(user, 'profile_url') or safe_get(user, 'url') or safe_get(user,
+                                                                                                                'profile_pic')
+                tagged_user['profile_pic'] = safe_get(user, 'profile_pic') or safe_get(user, 'avatar') or safe_get(user,
+                                                                                                                   'picture')
+                if tagged_user.get('username'):
+                    tagged_users.append(tagged_user)
+
     # Extract post content
     post_content = safe_get(data, 'content') or safe_get(data, 'caption') or safe_get(data, 'text') or safe_get(data,
                                                                                                                 'description')
@@ -252,6 +312,7 @@ def parse_json_post(json_content: str) -> Dict[str, Any]:
         "likes": likes,
         "comments": comments,
         "user_info": user_info,
+        "tagged_users": tagged_users,
         "post_content": post_content,
         "timestamp": timestamp,
         "post_type": "video" if video_url else "image" if images else "unknown"

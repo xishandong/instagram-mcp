@@ -1,3 +1,11 @@
-mcp~=1.26.0
-zendriver~=0.15.2
-beautifulsoup4~=4.14.3
+# MCP SDK
+mcp>=1.0.0,<2.0.0
+
+# Browser automation
+zendriver>=0.5.0,<1.0.0
+
+# HTTP requests with TLS fingerprinting
+noble-tls>=0.1.0
+
+# HTML parsing
+beautifulsoup4>=4.12.0

@@ -1,0 +1,9 @@
+{
+  "proxy": {
+    "url": "",
+    "enabled": false
+  },
+  "browser": {
+    "headless": true
+  }
+}

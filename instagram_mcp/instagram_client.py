@@ -11,8 +11,8 @@ from zendriver.cdp.fetch import AuthChallengeResponse, AuthRequired, RequestPaus
 from zendriver.core.element import Element
 from noble_tls import Session, Client
 
-from post_parser import parse_json_post, parse_html_post
-from utils import parse_imginn_search_results, extract_json, Proxy, headers
+from instagram_mcp.post_parser import parse_json_post, parse_html_post
+from instagram_mcp.utils import parse_imginn_search_results, extract_json, Proxy, headers
 
 
 class ChallengePlatform(Enum):
@@ -304,8 +304,8 @@ async def main():
     # posts = await client.get_user_posts(posts.get("_id"), posts.get("cursor"))
     # print(posts)
     # post = await client.get_post_details("DOZirOEEkZ6")
-    # post = await client.get_post_details("DVIdTG7kmiD")
-    post = await client.get_post_details("DOZiPSnkprB")
+    post = await client.get_post_details("DVIdTG7kmiD")
+    # post = await client.get_post_details("DOZiPSnkprB")
     print(post)
 
     await client.close()

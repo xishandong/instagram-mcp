@@ -1,0 +1,166 @@
+{
+  "name": "instagram-mcp",
+  "description": "Instagram MCP Server - Access Instagram public data including user profiles, posts, and media content",
+  "author": "instagram-mcp",
+  "version": "0.1.0",
+  "category": "social-media",
+  "icon": "📷",
+  "tags": [
+    "instagram",
+    "social-media",
+    "scraper",
+    "mcp",
+    "photos",
+    "videos"
+  ],
+  "tools": {
+    "search_users": {
+      "name": "search_users",
+      "description": "Search Instagram users by username or display name",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Username or full name to search for"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    "get_user_profile": {
+      "name": "get_user_profile",
+      "description": "Get detailed profile information of an Instagram user",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Instagram username (without @)"
+          }
+        },
+        "required": ["username"]
+      }
+    },
+    "get_user_posts": {
+      "name": "get_user_posts",
+      "description": "Get posts from a specific Instagram user with pagination support",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "User ID obtained from get_user_profile"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor for loading more posts (optional)"
+          }
+        },
+        "required": ["_id"]
+      }
+    },
+    "get_post_details": {
+      "name": "get_post_details",
+      "description": "Get detailed information about a specific Instagram post including images, videos, and engagement stats",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "post_shortcode": {
+            "type": "string",
+            "description": "Instagram post shortcode extracted from the URL (e.g., DOZirOEEkZ6 from /p/DOZirOEEkZ6/)"
+          }
+        },
+        "required": ["post_shortcode"]
+      }
+    },
+    "configure_proxy": {
+      "name": "configure_proxy",
+      "description": "Configure proxy settings for accessing Instagram (required for first-time setup)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "proxy_url": {
+            "type": "string",
+            "description": "Proxy URL (e.g., http://127.0.0.1:7890 or http://user:pass@proxy.com:port)"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable or disable proxy usage",
+            "default": true
+          }
+        },
+        "required": ["proxy_url"]
+      }
+    }
+  },
+  "examples": [
+    {
+      "title": "Search and view user profile",
+      "description": "Find an Instagram user and view their profile information",
+      "steps": [
+        {
+          "tool": "search_users",
+          "params": {
+            "query": "national geographic"
+          }
+        },
+        {
+          "tool": "get_user_profile",
+          "params": {
+            "username": "natgeo"
+          }
+        }
+      ]
+    },
+    {
+      "title": "View user's recent posts",
+      "description": "Get the latest posts from a specific user",
+      "steps": [
+        {
+          "tool": "get_user_profile",
+          "params": {
+            "username": "natgeo"
+          }
+        },
+        {
+          "tool": "get_user_posts",
+          "params": {
+            "_id": "{{user_id}}",
+            "cursor": null
+          }
+        }
+      ]
+    },
+    {
+      "title": "Get post details",
+      "description": "View detailed information about a specific post",
+      "steps": [
+        {
+          "tool": "get_post_details",
+          "params": {
+            "post_shortcode": "DOZirOEEkZ6"
+          }
+        }
+      ]
+    }
+  ],
+  "configuration": {
+    "env_required": false,
+    "proxy_required": true,
+    "first_time_setup": {
+      "description": "First-time setup requires configuring a proxy server",
+      "tool": "configure_proxy",
+      "params": {
+        "proxy_url": "YOUR_PROXY_URL",
+        "enabled": true
+      }
+    }
+  },
+  "limitations": [
+    "Requires proxy configuration for network access",
+    "Only accesses publicly available content",
+    "Subject to rate limiting from Instagram/imginn",
+    "May encounter Cloudflare challenges that require waiting"
+  ]
+}
