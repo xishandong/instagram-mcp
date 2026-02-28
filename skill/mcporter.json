@@ -1,16 +1,8 @@
 {
   "name": "instagram-mcp",
-  "type": "stdio",
+  "type": "sse",
   "description": "Instagram MCP Server - Access Instagram public data via imginn API",
-  "command": "python",
-  "args": [
-    "-m",
-    "instagram_mcp.server"
-  ],
-  "cwd": "${workspaceFolder}",
-  "env": {
-    "PYTHONPATH": "${workspaceFolder}"
-  },
+  "url": "http://127.0.0.1:8000/sse",
   "tools": [
     {
       "name": "search_users",
@@ -74,7 +66,7 @@
     },
     {
       "name": "configure_proxy",
-      "description": "Configure proxy settings for accessing Instagram (required for first-time setup)",
+      "description": "Configure proxy settings for accessing Instagram (required for first-time setup). After configuration, restart the server to apply changes.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -90,6 +82,33 @@
         },
         "required": ["proxy_url"]
       }
+    },
+    {
+      "name": "update_proxy_config",
+      "description": "Update or change proxy settings without restarting the server. Browser will be automatically closed and reopened with new proxy settings.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "proxy_url": {
+            "type": "string",
+            "description": "New proxy URL (e.g., http://127.0.0.1:7890 or http://user:pass@proxy.com:port)"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable or disable proxy usage",
+            "default": true
+          }
+        },
+        "required": ["proxy_url"]
+      }
+    },
+    {
+      "name": "close_browser",
+      "description": "Manually close the browser instance to free up resources. The browser will be automatically reopened on the next request if needed.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
     }
   ],
   "setup": {
@@ -102,8 +121,14 @@
       "message": "首次使用需要配置代理才能访问Instagram服务"
     }
   },
+  "mcpServers": {
+    "instagram-mcp": {
+      "baseUrl": "http://localhost:8000/sse"
+    }
+  },
   "auto_prompt": {
     "when_no_proxy": "检测到未配置代理，请先使用 configure_proxy 工具配置代理服务器",
+    "dynamic_tools_note": "当代理已配置后，会自动显示 update_proxy_config 和 close_browser 工具",
     "usage_examples": [
       {
         "trigger": "搜索ins用户",
@@ -130,6 +155,20 @@
         "trigger": "查看ins帖子详情",
         "workflow": [
           "get_post_details(post_shortcode=从URL提取的短码)"
+        ]
+      },
+      {
+        "trigger": "更新代理配置",
+        "workflow": [
+          "update_proxy_config(proxy_url=新代理地址)",
+          "浏览器将自动重启并应用新代理"
+        ]
+      },
+      {
+        "trigger": "关闭浏览器释放资源",
+        "workflow": [
+          "close_browser()",
+          "下次请求时会自动重新打开"
         ]
       }
     ]

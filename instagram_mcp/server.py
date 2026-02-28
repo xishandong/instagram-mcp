@@ -4,10 +4,17 @@ import json
 import sys
 from pathlib import Path
 
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
 try:
     from mcp.server import Server
-    from mcp.server.stdio import stdio_server
+    from mcp.server.sse import SseServerTransport
     from mcp.types import Tool, TextContent
+    from starlette.applications import Starlette
+    from starlette.routing import Mount, Route
+    from starlette.middleware.cors import CORSMiddleware
+    import uvicorn
 
     HAS_MCP = True
 except ImportError:
@@ -29,6 +36,10 @@ def load_config():
         },
         "browser": {
             "headless": True
+        },
+        "server": {
+            "host": "127.0.0.1",
+            "port": 8000
         }
     }
 
@@ -72,7 +83,7 @@ def create_server():
         print("MCP not installed.", file=sys.stderr)
         sys.exit(1)
 
-    server = Server("ins-mcp")
+    server = Server(name="instagram-mcp", version="1.0.0")
 
     # Check if proxy is configured
     proxy_configured = check_proxy_configured()
@@ -281,10 +292,42 @@ def create_server():
 
 async def main():
     server, client = create_server()
+    config = load_config()
+    host = config.get("server", {}).get("host", "127.0.0.1")
+    port = config.get("server", {}).get("port", 8000)
+
+    sse = SseServerTransport("/messages/")
+
+    async def handle_sse(request: Request):
+
+        async with sse.connect_sse(
+                request.scope,
+                request.receive,
+                request._send,
+        ) as (read_stream, write_stream):
+            await server.run(
+                read_stream,
+                write_stream,
+                server.create_initialization_options(),
+            )
+            return JSONResponse({"status": "ok"})
+
+    async def handle_health(request):
+        return JSONResponse({"status": "ok", "server": "instagram-mcp"})
+
+    starlette_app = Starlette(
+        debug=False,
+        routes=[
+            Route("/health", endpoint=handle_health),
+            Route("/sse", endpoint=handle_sse),
+            Mount("/messages/", app=sse.handle_post_message),
+        ],
+    )
+    config_uvicorn = uvicorn.Config(starlette_app, host=host, port=port, log_level="info")
+    server_uvicorn = uvicorn.Server(config_uvicorn)
 
     try:
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(read_stream, write_stream, server.create_initialization_options())
+        await server_uvicorn.serve()
     finally:
         # Ensure browser is closed when server shuts down
         print("Shutting down, closing browser...", file=sys.stderr)

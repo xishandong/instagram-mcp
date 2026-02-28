@@ -76,7 +76,7 @@
     },
     "configure_proxy": {
       "name": "configure_proxy",
-      "description": "Configure proxy settings for accessing Instagram (required for first-time setup)",
+      "description": "Configure proxy settings for accessing Instagram (required for first-time setup). Restart required after configuration.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -91,6 +91,33 @@
           }
         },
         "required": ["proxy_url"]
+      }
+    },
+    "update_proxy_config": {
+      "name": "update_proxy_config",
+      "description": "Update or change proxy settings without restarting the server. Browser will be automatically reset with new proxy settings.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "proxy_url": {
+            "type": "string",
+            "description": "New proxy URL (e.g., http://127.0.0.1:7890)"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable or disable proxy",
+            "default": true
+          }
+        },
+        "required": ["proxy_url"]
+      }
+    },
+    "close_browser": {
+      "name": "close_browser",
+      "description": "Manually close the browser instance to free up resources. Browser will auto-reopen on next request if needed.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
       }
     }
   },
@@ -148,6 +175,8 @@
   "configuration": {
     "env_required": false,
     "proxy_required": true,
+    "dynamic_tool_visibility": true,
+    "note": "When proxy is not configured, only 'configure_proxy' is shown. After proxy is configured, 'update_proxy_config' and 'close_browser' become available.",
     "first_time_setup": {
       "description": "First-time setup requires configuring a proxy server",
       "tool": "configure_proxy",
