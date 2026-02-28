@@ -1,3 +1,10 @@
+---
+name: instagram-mcp
+description: >
+   Instagram MCP Skill
+   Triggers: search_users, get_user_profile, get_user_posts, get_post_details
+---
+
 # Instagram MCP Skill
 
 用于让 AI Agent 通过MCP协议访问Instagram数据的Skill。
