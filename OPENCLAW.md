@@ -40,8 +40,6 @@ pip install -r ~/.openclaw/skills/instagram-mcp/requirements.txt
 │   ├── instagram_client.py
 │   ├── tools.py
 │   ├── utils.py
-│   ├── html_parser.py
-│   ├── json_parser.py
 │   └── post_parser.py
 ├── requirements.txt
 ├── SKILL.md          # 技能描述文档
