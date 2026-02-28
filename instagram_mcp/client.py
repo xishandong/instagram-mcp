@@ -38,7 +38,6 @@ class InstagramClient:
         self.base_url = "https://imginn.com"
 
         self.headless = headless
-
         self.proxy_url = proxy_url
         self._proxy = None
 
@@ -215,7 +214,9 @@ class InstagramClient:
         if not self.driver:
             await self.init_cookie()
 
-        api_url = f"{self.base_url}/api/posts/?id={_id}&cursor={cursor}"
+        api_url = f"{self.base_url}/api/posts/?id={_id}&cursor="
+        if cursor:
+            api_url += cursor
 
         try:
             await self.driver.get(api_url)
@@ -284,32 +285,3 @@ class InstagramClient:
             await self.driver.cookies.clear()
             await self.driver.stop()
             self.driver = None
-
-
-async def main():
-    client = InstagramClient(
-        proxy_url="http://127.0.0.1:7890",
-        # proxy_url="http://customer-rlazada-cc-sg-fast-true:iDyyucOaj8G3==@pr.oxylabs.io:7777",
-        # proxy_url="http://47.76.200.237:8094",
-        headless=True,
-    )
-    # info = await client.search_user("dlwlrma")
-    # print(info)
-    # info = await client.get_userprofile("dlwlrma")
-    # print(info)
-    # uid = info['data']['pk']
-    # posts = await client.get_user_posts("1692800026")
-    # print(posts)
-
-    # posts = await client.get_user_posts(posts.get("_id"), posts.get("cursor"))
-    # print(posts)
-    # post = await client.get_post_details("DOZirOEEkZ6")
-    post = await client.get_post_details("DVIdTG7kmiD")
-    # post = await client.get_post_details("DOZiPSnkprB")
-    print(post)
-
-    await client.close()
-
-
-if __name__ == '__main__':
-    asyncio.run(main())

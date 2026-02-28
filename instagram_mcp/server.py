@@ -100,61 +100,56 @@ def create_server():
     async def list_tools():
         """List all available Instagram tools"""
         tools = get_instagram_tools()
-
-        # Add configuration tools based on proxy status
-        if not proxy_configured:
-            # First-time setup - only show configure_proxy
-            config_tool = Tool(
-                name="configure_proxy",
-                description="Configure proxy settings for Instagram access (Required for first-time setup)",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "proxy_url": {
-                            "type": "string",
-                            "description": "Proxy URL (e.g., http://127.0.0.1:7890 or http://user:pass@proxy.com:port)"
-                        },
-                        "enabled": {
-                            "type": "boolean",
-                            "description": "Enable or disable proxy",
-                            "default": True
-                        }
+        config_tool = Tool(
+            name="configure_proxy",
+            description="Configure proxy settings for Instagram access (Required for first-time setup)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "proxy_url": {
+                        "type": "string",
+                        "description": "Proxy URL (e.g., http://127.0.0.1:7890 or http://user:pass@proxy.com:port)"
                     },
-                    "required": ["proxy_url"]
-                }
-            )
-            tools.append(config_tool)
-        else:
-            # Proxy already configured - show update_proxy_config and browser management
-            update_proxy_tool = Tool(
-                name="update_proxy_config",
-                description="Update or change proxy settings without restarting the server",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "proxy_url": {
-                            "type": "string",
-                            "description": "New proxy URL (e.g., http://127.0.0.1:7890 or http://user:pass@proxy.com:port)"
-                        },
-                        "enabled": {
-                            "type": "boolean",
-                            "description": "Enable or disable proxy",
-                            "default": True
-                        }
+                    "enabled": {
+                        "type": "boolean",
+                        "description": "Enable or disable proxy",
+                        "default": True
+                    }
+                },
+                "required": ["proxy_url"]
+            }
+        )
+        tools.append(config_tool)
+        # Proxy already configured - show update_proxy_config and browser management
+        update_proxy_tool = Tool(
+            name="update_proxy_config",
+            description="Update or change proxy settings without restarting the server",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "proxy_url": {
+                        "type": "string",
+                        "description": "New proxy URL (e.g., http://127.0.0.1:7890 or http://user:pass@proxy.com:port)"
                     },
-                    "required": ["proxy_url"]
-                }
-            )
-            close_browser_tool = Tool(
-                name="close_browser",
-                description="Manually close the browser instance to free up resources",
-                inputSchema={
-                    "type": "object",
-                    "properties": {}
-                }
-            )
-            tools.append(update_proxy_tool)
-            tools.append(close_browser_tool)
+                    "enabled": {
+                        "type": "boolean",
+                        "description": "Enable or disable proxy",
+                        "default": True
+                    }
+                },
+                "required": ["proxy_url"]
+            }
+        )
+        close_browser_tool = Tool(
+            name="close_browser",
+            description="Manually close the browser instance to free up resources",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        )
+        tools.append(update_proxy_tool)
+        tools.append(close_browser_tool)
 
         return tools
 
@@ -319,6 +314,15 @@ async def main():
             Mount("/messages/", app=sse.handle_post_message),
         ],
     )
+    # Add CORS middleware to allow all origins
+    starlette_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     config_uvicorn = uvicorn.Config(starlette_app, host=host, port=port, log_level="info")
     server_uvicorn = uvicorn.Server(config_uvicorn)
 
