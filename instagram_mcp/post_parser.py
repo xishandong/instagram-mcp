@@ -279,8 +279,10 @@ def parse_json_post(json_content: str) -> Dict[str, Any]:
         else:
             user_info['username'] = str(user_data)
 
-    # Extract tagged users
+    # Extract tagged users - support multiple JSON structures
     tagged_users = []
+
+    # Standard tagged users format
     tagged_users_data = safe_get(data, 'tagged_users') or safe_get(data, 'taggedUsers') or safe_get(data, 'mentions')
     if isinstance(tagged_users_data, list):
         for user in tagged_users_data:
@@ -297,6 +299,24 @@ def parse_json_post(json_content: str) -> Dict[str, Any]:
                                                                                                                    'picture')
                 if tagged_user.get('username'):
                     tagged_users.append(tagged_user)
+
+    # Instagram GraphQL format (from xdt_shortcode_media)
+    if not tagged_users:
+        graphql_tagged = safe_get(data, 'xdt_shortcode_media', 'edge_media_to_tagged_user', 'edges')
+        if graphql_tagged and isinstance(graphql_tagged, list):
+            for edge in graphql_tagged:
+                node = safe_get(edge, 'node')
+                if node:
+                    user = safe_get(node, 'user')
+                    if user:
+                        tagged_user = {}
+                        tagged_user['username'] = safe_get(user, 'username')
+                        tagged_user['display_name'] = safe_get(user, 'full_name') or tagged_user.get('username', '')
+                        tagged_user['profile_url'] = f"https://instagram.com/{tagged_user['username']}" if tagged_user[
+                            'username'] else None
+                        tagged_user['profile_pic'] = safe_get(user, 'profile_pic_url')
+                        if tagged_user.get('username'):
+                            tagged_users.append(tagged_user)
 
     # Extract post content
     post_content = safe_get(data, 'content') or safe_get(data, 'caption') or safe_get(data, 'text') or safe_get(data,

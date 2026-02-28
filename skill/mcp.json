@@ -1,0 +1,137 @@
+{
+  "name": "instagram-mcp",
+  "type": "stdio",
+  "description": "Instagram MCP Server - Access Instagram public data via imginn API",
+  "command": "python",
+  "args": [
+    "-m",
+    "instagram_mcp.server"
+  ],
+  "cwd": "${workspaceFolder}",
+  "env": {
+    "PYTHONPATH": "${workspaceFolder}"
+  },
+  "tools": [
+    {
+      "name": "search_users",
+      "description": "Search Instagram users by username or display name",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Username or full name to search for"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "get_user_profile",
+      "description": "Get detailed profile information of an Instagram user",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Instagram username (without @)"
+          }
+        },
+        "required": ["username"]
+      }
+    },
+    {
+      "name": "get_user_posts",
+      "description": "Get posts from a specific Instagram user with pagination support",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "User ID obtained from get_user_profile"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Pagination cursor for loading more posts (optional)"
+          }
+        },
+        "required": ["_id"]
+      }
+    },
+    {
+      "name": "get_post_details",
+      "description": "Get detailed information about a specific Instagram post including images, videos, and engagement stats",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "post_shortcode": {
+            "type": "string",
+            "description": "Instagram post shortcode extracted from the URL (e.g., DOZirOEEkZ6 from /p/DOZirOEEk6/)"
+          }
+        },
+        "required": ["post_shortcode"]
+      }
+    },
+    {
+      "name": "configure_proxy",
+      "description": "Configure proxy settings for accessing Instagram (required for first-time setup)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "proxy_url": {
+            "type": "string",
+            "description": "Proxy URL (e.g., http://127.0.0.1:7890 or http://user:pass@proxy.com:port)"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable or disable proxy usage",
+            "default": true
+          }
+        },
+        "required": ["proxy_url"]
+      }
+    }
+  ],
+  "setup": {
+    "first_run": {
+      "action": "configure_proxy",
+      "params": {
+        "proxy_url": "YOUR_PROXY_URL",
+        "enabled": true
+      },
+      "message": "首次使用需要配置代理才能访问Instagram服务"
+    }
+  },
+  "auto_prompt": {
+    "when_no_proxy": "检测到未配置代理，请先使用 configure_proxy 工具配置代理服务器",
+    "usage_examples": [
+      {
+        "trigger": "搜索ins用户",
+        "workflow": [
+          "search_users(query=用户输入的关键词)",
+          "根据结果确认准确用户名"
+        ]
+      },
+      {
+        "trigger": "查看ins用户资料",
+        "workflow": [
+          "get_user_profile(username=用户名)",
+          "展示用户详细信息和统计数据"
+        ]
+      },
+      {
+        "trigger": "查看ins帖子",
+        "workflow": [
+          "get_user_profile(username=用户名) 获取用户ID",
+          "get_user_posts(_id=用户ID) 获取帖子列表"
+        ]
+      },
+      {
+        "trigger": "查看ins帖子详情",
+        "workflow": [
+          "get_post_details(post_shortcode=从URL提取的短码)"
+        ]
+      }
+    ]
+  }
+}

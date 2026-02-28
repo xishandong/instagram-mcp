@@ -14,7 +14,7 @@ except ImportError:
     HAS_MCP = False
 
 from instagram_mcp.tools import get_instagram_tools
-from instagram_mcp.instagram_client import InstagramClient
+from instagram_mcp.client import InstagramClient
 
 CONFIG_DIR = Path.home() / ".instagram-mcp"
 CONFIG_FILE = CONFIG_DIR / "config.json"
@@ -94,8 +94,9 @@ def create_server():
         """List all available Instagram tools"""
         tools = get_instagram_tools()
 
-        # Add configuration tool if proxy is not configured
+        # Add configuration tools based on proxy status
         if not proxy_configured:
+            # First-time setup - only show configure_proxy
             config_tool = Tool(
                 name="configure_proxy",
                 description="Configure proxy settings for Instagram access (Required for first-time setup)",
@@ -116,6 +117,37 @@ def create_server():
                 }
             )
             tools.append(config_tool)
+        else:
+            # Proxy already configured - show update_proxy_config and browser management
+            update_proxy_tool = Tool(
+                name="update_proxy_config",
+                description="Update or change proxy settings without restarting the server",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "proxy_url": {
+                            "type": "string",
+                            "description": "New proxy URL (e.g., http://127.0.0.1:7890 or http://user:pass@proxy.com:port)"
+                        },
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enable or disable proxy",
+                            "default": True
+                        }
+                    },
+                    "required": ["proxy_url"]
+                }
+            )
+            close_browser_tool = Tool(
+                name="close_browser",
+                description="Manually close the browser instance to free up resources",
+                inputSchema={
+                    "type": "object",
+                    "properties": {}
+                }
+            )
+            tools.append(update_proxy_tool)
+            tools.append(close_browser_tool)
 
         return tools
 
@@ -123,7 +155,7 @@ def create_server():
     async def call_tool(name: str, arguments: dict):
         """Handle tool calls"""
         try:
-            # Handle proxy configuration
+            # Handle initial proxy configuration
             if name == "configure_proxy":
                 new_proxy_url = arguments.get("proxy_url", "")
                 enabled = arguments.get("enabled", True)
@@ -147,6 +179,63 @@ def create_server():
                         text=json.dumps({
                             "success": False,
                             "error": "Failed to save configuration"
+                        }, ensure_ascii=False, indent=2)
+                    )]
+
+            # Handle proxy configuration update (no restart required)
+            if name == "update_proxy_config":
+                new_proxy_url = arguments.get("proxy_url", "")
+                enabled = arguments.get("enabled", True)
+
+                new_config = load_config()
+                old_proxy_url = new_config["proxy"]["url"]
+                new_config["proxy"]["url"] = new_proxy_url
+                new_config["proxy"]["enabled"] = enabled
+
+                if save_config(new_config):
+                    # Close existing browser to apply new proxy settings
+                    await client.close()
+
+                    # Update client with new proxy settings
+                    client.proxy_url = new_proxy_url if enabled else ""
+                    client._proxy = None  # Will be recreated on next request
+
+                    return [TextContent(
+                        type="text",
+                        text=json.dumps({
+                            "success": True,
+                            "message": "Proxy configuration updated successfully. Browser has been reset with new proxy settings.",
+                            "old_proxy": old_proxy_url,
+                            "new_proxy": new_proxy_url,
+                            "enabled": enabled
+                        }, ensure_ascii=False, indent=2)
+                    )]
+                else:
+                    return [TextContent(
+                        type="text",
+                        text=json.dumps({
+                            "success": False,
+                            "error": "Failed to save configuration"
+                        }, ensure_ascii=False, indent=2)
+                    )]
+
+            # Handle manual browser close
+            if name == "close_browser":
+                try:
+                    await client.close()
+                    return [TextContent(
+                        type="text",
+                        text=json.dumps({
+                            "success": True,
+                            "message": "Browser closed successfully. It will be automatically reopened on the next request."
+                        }, ensure_ascii=False, indent=2)
+                    )]
+                except Exception as e:
+                    return [TextContent(
+                        type="text",
+                        text=json.dumps({
+                            "success": False,
+                            "error": f"Failed to close browser: {str(e)}"
                         }, ensure_ascii=False, indent=2)
                     )]
 
@@ -187,13 +276,19 @@ def create_server():
             error_result = {"error": str(e), "tool": name}
             return [TextContent(type="text", text=json.dumps(error_result, ensure_ascii=False, indent=2))]
 
-    return server
+    return server, client
 
 
 async def main():
-    server = create_server()
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(read_stream, write_stream, server.create_initialization_options())
+    server, client = create_server()
+
+    try:
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(read_stream, write_stream, server.create_initialization_options())
+    finally:
+        # Ensure browser is closed when server shuts down
+        print("Shutting down, closing browser...", file=sys.stderr)
+        await client.close()
 
 
 if __name__ == "__main__":

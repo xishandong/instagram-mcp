@@ -1,8 +1,33 @@
 ---
 name: instagram-mcp
-description: >
-   Instagram MCP Skill
-   Triggers: search_users, get_user_profile, get_user_posts, get_post_details
+type: mcp
+description: |
+  Instagram MCP Skill - 通过MCP协议访问Instagram公开数据
+  支持搜索用户、查看用户资料、获取帖子、查看帖子详情等功能
+
+triggers:
+  - "搜索ins用户"
+  - "搜索INS用户"
+  - "查看ins用户资料"
+  - "查看INS用户资料"
+  - "查看ins发帖历史"
+  - "查看INS发帖历史"
+  - "查看ins帖子详情"
+  - "查看INS帖子详情"
+  - "下载ins帖子图片"
+  - "下载ins帖子视频"
+  - "分析ins帖子数据"
+  - "关闭浏览器"
+  - "更新代理配置"
+  
+tools:
+  - search_users
+  - get_user_profile
+  - get_user_posts
+  - get_post_details
+  - configure_proxy
+  - close_browser
+  - update_proxy_config
 ---
 
 # Instagram MCP Skill
