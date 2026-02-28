@@ -37,10 +37,6 @@ def load_config():
         "browser": {
             "headless": True
         },
-        "server": {
-            "host": "127.0.0.1",
-            "port": 8000
-        }
     }
 
     if CONFIG_FILE.exists():

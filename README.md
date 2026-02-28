@@ -52,34 +52,45 @@ python -m instagram_mcp.server
 python instagram_mcp/server.py
 ```
 
+### 添加mcp
+
+```bash
+mcporter config add instagram-mcp http://localhost:8000/sse
+
+```
+
 ## 可用工具
 
-| 工具名 | 描述 | 必需参数 |
-|--------|------|---------|
-| `search_users` | 搜索Instagram用户 | `query`: 搜索关键词 |
-| `get_user_profile` | 获取用户资料 | `username`: 用户名 |
-| `get_user_posts` | 获取用户帖子 | `_id`: 用户ID（从get_user_profile获取） |
-| `get_post_details` | 获取帖子详情 | `post_shortcode`: 帖子短码 |
-| `configure_proxy` | 配置代理设置 | `proxy_url`: 代理地址 |
+| 工具名                | 描述            | 必需参数                             |
+|--------------------|---------------|----------------------------------|
+| `search_users`     | 搜索Instagram用户 | `query`: 搜索关键词                   |
+| `get_user_profile` | 获取用户资料        | `username`: 用户名                  |
+| `get_user_posts`   | 获取用户帖子        | `_id`: 用户ID（从get_user_profile获取） |
+| `get_post_details` | 获取帖子详情        | `post_shortcode`: 帖子短码           |
+| `configure_proxy`  | 配置代理设置        | `proxy_url`: 代理地址                |
 
 ## 使用示例
 
 ### 1. 搜索用户
+
 ```python
 result = await client.call_tool("search_users", {"query": "dlwlrma"})
 ```
 
 ### 2. 获取用户资料
+
 ```python
 result = await client.call_tool("get_user_profile", {"username": "dlwlrma"})
 ```
 
 ### 3. 获取用户帖子
+
 ```python
 result = await client.call_tool("get_user_posts", {"_id": "1692800026"})
 ```
 
 ### 4. 获取帖子详情
+
 ```python
 result = await client.call_tool("get_post_details", {"post_shortcode": "DOZirOEEkZ6"})
 ```
@@ -87,6 +98,7 @@ result = await client.call_tool("get_post_details", {"post_shortcode": "DOZirOEE
 ## 数据结构
 
 ### 用户信息
+
 ```json
 {
   "username": "string",
@@ -98,14 +110,20 @@ result = await client.call_tool("get_post_details", {"post_shortcode": "DOZirOEE
 ```
 
 ### 帖子信息
+
 ```json
 {
   "post_url": "string",
-  "images": ["url1", "url2"],
+  "images": [
+    "url1",
+    "url2"
+  ],
   "video_url": "string",
   "likes": 1234,
   "comments": 56,
-  "user_info": {...},
+  "user_info": {
+    ...
+  },
   "post_content": "string",
   "timestamp": "string",
   "post_type": "image/video/unknown"
@@ -117,17 +135,20 @@ result = await client.call_tool("get_post_details", {"post_shortcode": "DOZirOEE
 本项目包含Skill配置，可以与支持MCP的AI Agent集成使用。
 
 在Cursor或Cline中添加配置：
+
 - **MCP Server**: 指向本项目的server.py
 - **Skill**: 参考skill/SKILL.md
 
 ## 开发
 
 ### 运行测试
+
 ```bash
 pytest tests/
 ```
 
 ### 项目结构
+
 ```
 instagram-mcp/
 ├── instagram_mcp/
