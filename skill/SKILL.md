@@ -40,7 +40,7 @@ tools:
   - instagram-mcp.search_users
   - instagram-mcp.get_user_profile
   - instagram-mcp.get_user_posts
-  - instagram-mcp.get_post_details
+  - instagram-mcp.get_post_detail
   - instagram-mcp.configure
   - instagram-mcp.update_proxy_config
   - instagram-mcp.close_browser
@@ -121,6 +121,8 @@ mcporter call 'instagram-mcp.search_users(query: <query>)'
 mcporter call 'instagram-mcp.search_users(query: "iu")'
 ```
 
+注意: 在ins搜索用户时，使用单个单词搜索，不要多个单词一次搜索
+
 **返回值**：
 ```json
 {
@@ -190,13 +192,13 @@ mcporter call 'instagram-mcp.get_user_posts(_id: "123456789", cursor: "QVFEMHlsV
 }
 ```
 
-### 5. get_post_details
+### 5. get_post_detail
 
 获取帖子详细信息。
 
 **命令**：
 ```bash
-mcporter call 'instagram-mcp.get_post_details(post_shortcode: <shortcode>)'
+mcporter call 'instagram-mcp.get_post_detail(post_shortcode: <shortcode>)'
 ```
 
 **参数**：
@@ -204,7 +206,7 @@ mcporter call 'instagram-mcp.get_post_details(post_shortcode: <shortcode>)'
 
 **示例**：
 ```bash
-mcporter call 'instagram-mcp.get_post_details(post_shortcode: "DVIdTG7kmiD")'
+mcporter call 'instagram-mcp.get_post_detail(post_shortcode: "DVIdTG7kmiD")'
 ```
 
 **返回值**：
@@ -276,7 +278,7 @@ mcporter call 'instagram-mcp.get_user_posts(_id: "123456789", cursor: "QVFEMHlsV
 ### 5. 获取帖子详情
 
 ```bash
-mcporter call 'instagram-mcp.get_post_details(post_shortcode: "DVIdTG7kmiD")'
+mcporter call 'instagram-mcp.get_post_detail(post_shortcode: "DVIdTG7kmiD")'
 ```
 
 ### 6. 释放资源

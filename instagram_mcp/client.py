@@ -246,7 +246,7 @@ class InstagramClient:
                 "error": str(e),
             }
 
-    async def get_post_details(self, post_shortcode: str) -> Dict[str, Any]:
+    async def get_post_detail(self, post_shortcode: str) -> Dict[str, Any]:
         """获取帖子详情 - 参考 instaloader 的方式解析 Instagram HTML"""
         try:
             if not self.driver:

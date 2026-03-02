@@ -38,7 +38,7 @@ def get_instagram_tools():
             }
         ),
         Tool(
-            name="get_post_details",
+            name="get_post_detail",
             description="Get detailed information about a specific Instagram post",
             inputSchema={
                 "type": "object",
