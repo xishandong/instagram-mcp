@@ -1,87 +1,32 @@
 #!/bin/bash
-
-# Instagram MCP Skill Installation Script for OpenClaw
+# Instagram MCP OpenClaw 安装脚本
 
 set -e
 
-echo "=========================================="
-echo "Instagram MCP Skill Installation"
-echo "=========================================="
-echo ""
+SKILL_NAME="instagram-mcp"
+SOURCE_DIR="/Users/dongxishan/XishanWork/PythonProjects/instagram-mcp"
+TARGET_DIR="${HOME}/.openclaw/skills/${SKILL_NAME}"
 
-# Check if Python is installed
-if ! command -v python3 &> /dev/null; then
-    echo "Error: Python 3 is not installed. Please install Python 3 first."
+echo "=========================================="
+echo "Installing Instagram MCP to OpenClaw"
+echo "=========================================="
+
+# 1. 检查 OpenClaw 目录是否存在
+if [ ! -d "${HOME}/.openclaw" ]; then
+    echo "❌ Error: OpenClaw directory not found at ${HOME}/.openclaw"
+    echo "Please install and run OpenClaw first."
     exit 1
 fi
 
-echo "✓ Python 3 found: $(python3 --version)"
-echo ""
-
-# Check if pip is installed
-if ! command -v pip3 &> /dev/null; then
-    echo "Error: pip3 is not installed. Please install pip3 first."
-    exit 1
+# 2. 清理旧版本
+if [ -d "$TARGET_DIR" ]; then
+    echo "Removing existing installation..."
+    rm -rf "$TARGET_DIR"
 fi
 
-echo "✓ pip3 found"
-echo ""
+# 3. 创建目录结构
+mkdir -p "$TARGET_DIR"
 
-# Install dependencies
-echo "Installing dependencies..."
-pip3 install -r requirements.txt
-
-echo "✓ Dependencies installed successfully"
-echo ""
-
-# Create config directory
-CONFIG_DIR="$HOME/.instagram-mcp"
-mkdir -p "$CONFIG_DIR"
-
-echo "✓ Config directory created: $CONFIG_DIR"
-echo ""
-
-# Check if mcporter is installed
-if ! command -v mcporter &> /dev/null; then
-    echo "Warning: mcporter CLI is not found. Please install mcporter to use this skill."
-    echo "You can install it from: https://github.com/your-repo/mcporter"
-    echo ""
-else
-    echo "✓ mcporter CLI found: $(mcporter --version 2>/dev/null || echo 'version unknown')"
-    echo ""
-fi
-
-# Create default config
-if [ ! -f "$CONFIG_DIR/config.json" ]; then
-    echo "Creating default config file..."
-    cat > "$CONFIG_DIR/config.json" << EOF
-{
-  "proxy": {
-    "url": ""
-  },
-  "browser": {
-    "headless": true
-  }
-}
-EOF
-    echo "✓ Default config file created: $CONFIG_DIR/config.json"
-    echo ""
-fi
-
-echo "=========================================="
-echo "Installation completed successfully!"
-echo "=========================================="
-echo ""
-echo "Next steps:"
-echo "1. Start the MCP server:"
-echo "   python -m instagram_mcp.server"
-echo ""
-echo "2. Check service status:"
-echo "   curl http://127.0.0.1:8000/health"
-echo ""
-echo "3. Configure proxy:"
-echo "   mcporter call configure --proxy_url \"http://127.0.0.1:7890\""
-echo ""
-echo "4. Start using the skill:"
-echo "   mcporter call search_users --query \"instagram\""
-echo ""
+# 4. 复制 Skill 配置文件
+cp "${SOURCE_DIR}/skill/SKILL.md" "$TARGET_DIR/"
+echo "✅ Successfully installed Instagram MCP to OpenClaw"

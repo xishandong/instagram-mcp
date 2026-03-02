@@ -226,18 +226,20 @@ class InstagramClient:
             await self.driver.get(api_url)
             await self.driver.main_tab.wait_for_ready_state("complete")
             await self.solve()
-
-            result = await self.driver.main_tab.get_content()
-            result = extract_json(result)
-            return {
-                "success": True,
-                "data": {
-                    "posts": result.get("items", []),
-                    "cursor": result.get("cursor", ""),
-                    "hasNext": result.get("hasNext", False),
-                    "_id": _id,
-                },
-            }
+            for _ in range(3):
+                result = await self.driver.main_tab.get_content()
+                result = extract_json(result)
+                if result:
+                    print("get_user_posts call success, cursor:", result.get("cursor", ""))
+                    return {
+                        "success": True,
+                        "data": {
+                            "_id": _id,
+                            "cursor": result.get("cursor", ""),
+                            "hasNext": result.get("hasNext", False),
+                            "posts": result.get("items", []),
+                        },
+                    }
         except Exception as e:
             return {
                 "success": False,
