@@ -119,13 +119,14 @@ def create_server():
             if name == "configure":
                 print("call_tool", name, arguments)
                 proxy_url = arguments.get("proxy_url", "")
-                _headless = arguments.get("headless", True)
+                headless = arguments.get("headless", True)
 
                 new_config = load_config()
                 new_config["proxy"]["url"] = proxy_url
-                new_config["browser"]["headless"] = _headless
+                new_config["browser"]["headless"] = headless
                 init_proxy = proxy_url
-                init_headless = _headless
+                init_headless = headless
+
                 if save_config(new_config):
                     return [TextContent(
                         type="text",

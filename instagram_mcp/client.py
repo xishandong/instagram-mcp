@@ -227,10 +227,12 @@ class InstagramClient:
             result = extract_json(result)
             return {
                 "success": True,
-                "data": result.get("items", []),
-                "cursor": result.get("cursor", ""),
-                "hasNext": result.get("hasNext", False),
-                "_id": _id,
+                "data": {
+                    "posts": result.get("items", []),
+                    "cursor": result.get("cursor", ""),
+                    "hasNext": result.get("hasNext", False),
+                    "_id": _id,
+                },
             }
         except Exception as e:
             return {
