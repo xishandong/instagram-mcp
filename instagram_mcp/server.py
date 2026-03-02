@@ -124,8 +124,6 @@ def create_server():
                 new_config = load_config()
                 new_config["proxy"]["url"] = proxy_url
                 new_config["browser"]["headless"] = headless
-                init_proxy = proxy_url
-                init_headless = headless
 
                 if save_config(new_config):
                     return [TextContent(
@@ -181,11 +179,15 @@ def create_server():
             config = load_config()
             proxy = config.get("proxy", {}).get("url", "")
             headless = config.get("browser", {}).get("headless", True)
+
             if proxy != init_proxy or headless != init_headless:
                 print("用户配置了代理，重新初始化浏览器")
                 await client.close()
                 client.headless = headless
                 client.proxy_url = proxy
+                init_proxy = proxy
+                init_headless = headless
+
             # Handle Instagram tools
             if name == "search_users":
                 print("call_tool", name, arguments)

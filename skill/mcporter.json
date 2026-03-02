@@ -1,0 +1,109 @@
+{
+  "name": "instagram-mcp",
+  "version": "1.0.0",
+  "description": "Instagram MCP service for OpenClaw integration",
+  "author": "Instagram MCP Team",
+  "license": "MIT",
+  "mcp": {
+    "name": "instagram-mcp",
+    "version": "1.0.0",
+    "endpoint": "http://127.0.0.1:8000/sse",
+    "health_check": "http://127.0.0.1:8000/health"
+  },
+  "tools": [
+    {
+      "name": "configure",
+      "description": "Configure proxy and browser settings",
+      "command": "mcporter call configure",
+      "parameters": {
+        "proxy_url": {
+          "type": "string",
+          "required": true,
+          "description": "Proxy URL (e.g., http://127.0.0.1:7890)"
+        },
+        "headless": {
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "description": "Enable headless mode (true=no GUI, false=show browser)"
+        }
+      }
+    },
+    {
+      "name": "search_users",
+      "description": "Search Instagram users by username or name",
+      "command": "mcporter call search_users",
+      "parameters": {
+        "query": {
+          "type": "string",
+          "required": true,
+          "description": "Username or full name to search for"
+        }
+      }
+    },
+    {
+      "name": "get_user_profile",
+      "description": "Get profile information about a specific Instagram user",
+      "command": "mcporter call get_user_profile",
+      "parameters": {
+        "username": {
+          "type": "string",
+          "required": true,
+          "description": "Instagram username"
+        }
+      }
+    },
+    {
+      "name": "get_user_posts",
+      "description": "Get posts from a specific Instagram user with pagination support",
+      "command": "mcporter call get_user_posts",
+      "parameters": {
+        "_id": {
+          "type": "string",
+          "required": true,
+          "description": "User ID from get_user_profile"
+        },
+        "cursor": {
+          "type": "string",
+          "required": false,
+          "description": "Cursor from previous posts request for pagination"
+        }
+      }
+    },
+    {
+      "name": "get_post_details",
+      "description": "Get detailed information about a specific Instagram post",
+      "command": "mcporter call get_post_details",
+      "parameters": {
+        "post_shortcode": {
+          "type": "string",
+          "required": true,
+          "description": "Post shortcode (the part after /p/ in URL)"
+        }
+      }
+    },
+    {
+      "name": "close_browser",
+      "description": "Manually close the browser instance to free up resources",
+      "command": "mcporter call close_browser",
+      "parameters": {}
+    }
+  ],
+  "installation": {
+    "requirements": [
+      "mcp>=1.0.0,<2.0.0",
+      "uvicorn>=0.24.0",
+      "starlette>=0.27.0",
+      "zendriver>=0.5.0,<1.0.0",
+      "noble-tls>=0.1.0",
+      "beautifulsoup4>=4.12.0"
+    ],
+    "setup_command": "pip install -r requirements.txt",
+    "start_command": "python -m instagram_mcp.server"
+  },
+  "configuration": {
+    "config_file": "~/.instagram-mcp/config.json",
+    "environment_variables": [],
+    "required_settings": ["proxy_url"]
+  }
+}

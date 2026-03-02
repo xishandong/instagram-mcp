@@ -64,7 +64,7 @@ Instagram 访问需要配置代理。使用 `configure` 工具进行配置：
 python -m instagram_mcp.server
 ```
 
-服务器默认运行在 `http://127.0.0.1:8000`
+服务器默认运行在 `http://127.0.0.1:8000/sse`
 
 ### 可用工具
 

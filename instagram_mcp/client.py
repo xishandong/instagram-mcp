@@ -195,12 +195,16 @@ class InstagramClient:
             await self.driver.main_tab.wait_for_ready_state("complete")
             await self.solve()
 
-            result = await self.driver.main_tab.get_content()
-            result = extract_json(result)
-            return {
-                "success": True,
-                "data": result
-            }
+            for _ in range(3):
+                result = await self.driver.main_tab.get_content()
+                result = extract_json(result)
+                if result:
+                    return {
+                        "success": True,
+                        "data": result
+                    }
+            else:
+                raise
 
         except Exception as e:
             print(f"获取用户资料失败: {e}")
@@ -243,38 +247,49 @@ class InstagramClient:
     async def get_post_details(self, post_shortcode: str) -> Dict[str, Any]:
         """获取帖子详情 - 参考 instaloader 的方式解析 Instagram HTML"""
         try:
-            # 使用 noble_tls 直接请求 Instagram 帖子页面
-            session = Session(client=Client.CHROME_133, random_tls_extension_order=True)
-            response = await session.get(
-                "https://www.instagram.com/graphql/query",
-                headers=headers,
-                params={
-                    "variables": json.dumps({"shortcode": post_shortcode}, separators=(',', ':')),
-                    "doc_id": "8845758582119845",
-                    "server_timestamps": "true"
-                },
-                proxy=self.proxy_url
-            )
-            html = response.json()
-            if html.get("status") != "ok":
-                print(html)
-                print("从ins直接获取post详情失败, 转为imginn获取")
-                if not self.driver:
-                    await self.init_cookie()
+            if not self.driver:
+                await self.init_cookie()
 
-                await self.driver.get(self.base_url + "/p/" + post_shortcode + "/")
-                await self.driver.main_tab.wait_for_ready_state("interactive")
-                await self.solve()
-                html = await self.driver.main_tab.get_content()
-                return {
-                    "success": True,
-                    "data": parse_html_post(html)
-                }
-            else:
-                return {
-                    "success": True,
-                    "data": parse_json_post(html)
-                }
+            await self.driver.get(self.base_url + "/p/" + post_shortcode + "/")
+            await self.driver.main_tab.wait_for_ready_state("interactive")
+            await self.solve()
+            html = await self.driver.main_tab.get_content()
+            return {
+                "success": True,
+                "data": parse_html_post(html)
+            }
+            # # 使用 noble_tls 直接请求 Instagram 帖子页面
+            # session = Session(client=Client.CHROME_133, random_tls_extension_order=True)
+            # response = await session.get(
+            #     "https://www.instagram.com/graphql/query",
+            #     headers=headers,
+            #     params={
+            #         "variables": json.dumps({"shortcode": post_shortcode}, separators=(',', ':')),
+            #         "doc_id": "8845758582119845",
+            #         "server_timestamps": "true"
+            #     },
+            #     proxy=self.proxy_url
+            # )
+            # html = response.json()
+            # if html.get("status") != "ok":
+            #     print(html)
+            #     print("从ins直接获取post详情失败, 转为imginn获取")
+            #     if not self.driver:
+            #         await self.init_cookie()
+            #
+            #     await self.driver.get(self.base_url + "/p/" + post_shortcode + "/")
+            #     await self.driver.main_tab.wait_for_ready_state("interactive")
+            #     await self.solve()
+            #     html = await self.driver.main_tab.get_content()
+            #     return {
+            #         "success": True,
+            #         "data": parse_html_post(html)
+            #     }
+            # else:
+            #     return {
+            #         "success": True,
+            #         "data": parse_json_post(html)
+            #     }
         except Exception as e:
             print(f"获取post详情失败: {e}")
             return {
