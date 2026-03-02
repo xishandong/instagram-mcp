@@ -7,18 +7,13 @@ from pathlib import Path
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-try:
-    from mcp.server import Server
-    from mcp.server.sse import SseServerTransport
-    from mcp.types import Tool, TextContent
-    from starlette.applications import Starlette
-    from starlette.routing import Mount, Route
-    from starlette.middleware.cors import CORSMiddleware
-    import uvicorn
-
-    HAS_MCP = True
-except ImportError:
-    HAS_MCP = False
+from mcp.server import Server
+from mcp.server.sse import SseServerTransport
+from mcp.types import Tool, TextContent
+from starlette.applications import Starlette
+from starlette.routing import Mount, Route
+from starlette.middleware.cors import CORSMiddleware
+import uvicorn
 
 from instagram_mcp.tools import get_instagram_tools
 from instagram_mcp.client import InstagramClient
@@ -32,7 +27,6 @@ def load_config():
     default_config = {
         "proxy": {
             "url": "",
-            "enabled": False
         },
         "browser": {
             "headless": True
@@ -68,41 +62,27 @@ def save_config(config):
 def check_proxy_configured():
     """Check if proxy is properly configured"""
     config = load_config()
-    proxy_enabled = config.get("proxy", {}).get("enabled", False)
     proxy_url = config.get("proxy", {}).get("url", "")
 
-    return proxy_enabled and bool(proxy_url)
+    return bool(proxy_url)
 
 
 def create_server():
-    if not HAS_MCP:
-        print("MCP not installed.", file=sys.stderr)
-        sys.exit(1)
-
     server = Server(name="instagram-mcp", version="1.0.0")
+    init_config = load_config()
 
-    # Check if proxy is configured
-    proxy_configured = check_proxy_configured()
+    init_proxy = init_config.get("proxy", {}).get("url", "")
+    init_headless = init_config.get("browser", {}).get("headless", True)
 
-    # Load configuration
-    config = load_config()
-
-    # Initialize Instagram client with config
-    proxy_url = config.get("proxy", {}).get("url", "")
-    if not config.get("proxy", {}).get("enabled", False):
-        proxy_url = ""
-
-    headless = config.get("browser", {}).get("headless", True)
-
-    client = InstagramClient(proxy_url=proxy_url, headless=headless)
+    client = InstagramClient(proxy_url=init_proxy, headless=init_headless)
 
     @server.list_tools()
     async def list_tools():
         """List all available Instagram tools"""
         tools = get_instagram_tools()
-        config_tool = Tool(
-            name="configure_proxy",
-            description="Configure proxy settings for Instagram access (Required for first-time setup)",
+        configure_tool = Tool(
+            name="configure",
+            description="Configure Instagram MCP settings (proxy and browser settings)",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -110,34 +90,11 @@ def create_server():
                         "type": "string",
                         "description": "Proxy URL (e.g., http://127.0.0.1:7890 or http://user:pass@proxy.com:port)"
                     },
-                    "enabled": {
+                    "headless": {
                         "type": "boolean",
-                        "description": "Enable or disable proxy",
-                        "default": True
+                        "description": "Enable or disable headless mode (true = no GUI, false = show browser window, default: true)"
                     }
-                },
-                "required": ["proxy_url"]
-            }
-        )
-        tools.append(config_tool)
-        # Proxy already configured - show update_proxy_config and browser management
-        update_proxy_tool = Tool(
-            name="update_proxy_config",
-            description="Update or change proxy settings without restarting the server",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "proxy_url": {
-                        "type": "string",
-                        "description": "New proxy URL (e.g., http://127.0.0.1:7890 or http://user:pass@proxy.com:port)"
-                    },
-                    "enabled": {
-                        "type": "boolean",
-                        "description": "Enable or disable proxy",
-                        "default": True
-                    }
-                },
-                "required": ["proxy_url"]
+                }
             }
         )
         close_browser_tool = Tool(
@@ -148,7 +105,7 @@ def create_server():
                 "properties": {}
             }
         )
-        tools.append(update_proxy_tool)
+        tools.append(configure_tool)
         tools.append(close_browser_tool)
 
         return tools
@@ -156,60 +113,26 @@ def create_server():
     @server.call_tool()
     async def call_tool(name: str, arguments: dict):
         """Handle tool calls"""
+        nonlocal init_proxy, init_headless
         try:
-            # Handle initial proxy configuration
-            if name == "configure_proxy":
-                new_proxy_url = arguments.get("proxy_url", "")
-                enabled = arguments.get("enabled", True)
+            # Handle initial configuration
+            if name == "configure":
+                print("call_tool", name, arguments)
+                proxy_url = arguments.get("proxy_url", "")
+                _headless = arguments.get("headless", True)
 
                 new_config = load_config()
-                new_config["proxy"]["url"] = new_proxy_url
-                new_config["proxy"]["enabled"] = enabled
-
+                new_config["proxy"]["url"] = proxy_url
+                new_config["browser"]["headless"] = _headless
+                init_proxy = proxy_url
+                init_headless = _headless
                 if save_config(new_config):
                     return [TextContent(
                         type="text",
                         text=json.dumps({
                             "success": True,
-                            "message": "Proxy configuration saved successfully. Please restart the MCP server to apply changes.",
+                            "message": "Configuration saved successfully. Please restart the MCP server to apply changes.",
                             "config": new_config
-                        }, ensure_ascii=False, indent=2)
-                    )]
-                else:
-                    return [TextContent(
-                        type="text",
-                        text=json.dumps({
-                            "success": False,
-                            "error": "Failed to save configuration"
-                        }, ensure_ascii=False, indent=2)
-                    )]
-
-            # Handle proxy configuration update (no restart required)
-            if name == "update_proxy_config":
-                new_proxy_url = arguments.get("proxy_url", "")
-                enabled = arguments.get("enabled", True)
-
-                new_config = load_config()
-                old_proxy_url = new_config["proxy"]["url"]
-                new_config["proxy"]["url"] = new_proxy_url
-                new_config["proxy"]["enabled"] = enabled
-
-                if save_config(new_config):
-                    # Close existing browser to apply new proxy settings
-                    await client.close()
-
-                    # Update client with new proxy settings
-                    client.proxy_url = new_proxy_url if enabled else ""
-                    client._proxy = None  # Will be recreated on next request
-
-                    return [TextContent(
-                        type="text",
-                        text=json.dumps({
-                            "success": True,
-                            "message": "Proxy configuration updated successfully. Browser has been reset with new proxy settings.",
-                            "old_proxy": old_proxy_url,
-                            "new_proxy": new_proxy_url,
-                            "enabled": enabled
                         }, ensure_ascii=False, indent=2)
                     )]
                 else:
@@ -224,6 +147,7 @@ def create_server():
             # Handle manual browser close
             if name == "close_browser":
                 try:
+                    print("call_tool", name, arguments)
                     await client.close()
                     return [TextContent(
                         type="text",
@@ -241,37 +165,51 @@ def create_server():
                         }, ensure_ascii=False, indent=2)
                     )]
 
+            proxy_configured = check_proxy_configured()
             # Check if proxy is configured for Instagram tools
             if not proxy_configured:
                 return [TextContent(
                     type="text",
                     text=json.dumps({
                         "success": False,
-                        "error": "Proxy not configured. Please use the 'configure_proxy' tool first to set up your proxy settings.",
+                        "error": "Proxy not configured. Please use the 'configure' tool first to set up your proxy settings.",
                         "message": "Instagram access requires a proxy to work properly. Please configure your proxy settings."
                     }, ensure_ascii=False, indent=2)
                 )]
 
+            config = load_config()
+            proxy = config.get("proxy", {}).get("url", "")
+            headless = config.get("browser", {}).get("headless", True)
+            if proxy != init_proxy or headless != init_headless:
+                print("用户配置了代理，重新初始化浏览器")
+                await client.close()
+                client.headless = headless
+                client.proxy_url = proxy
             # Handle Instagram tools
             if name == "search_users":
+                print("call_tool", name, arguments)
                 result = await client.search_user(arguments.get("query"))
                 return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
             elif name == "get_user_profile":
+                print("call_tool", name, arguments)
                 result = await client.get_profile(
                     arguments.get("username"),
                 )
                 return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
             elif name == "get_user_posts":
+                print("call_tool", name, arguments)
                 result = await client.get_user_posts(arguments.get("_id"), arguments.get("cursor"))
                 return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
             elif name == "get_post_details":
+                print("call_tool", name, arguments)
                 result = await client.get_post_details(arguments.get("post_shortcode"))
                 return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
             else:
+                print("call_tool", name, arguments)
                 return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
         except Exception as e:
