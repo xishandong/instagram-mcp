@@ -1,5 +1,4 @@
 import asyncio
-import json
 import random
 from datetime import datetime
 from enum import Enum
@@ -9,10 +8,9 @@ import zendriver
 from zendriver import cdp
 from zendriver.cdp.fetch import AuthChallengeResponse, AuthRequired, RequestPaused
 from zendriver.core.element import Element
-from noble_tls import Session, Client
 
-from instagram_mcp.post_parser import parse_json_post, parse_html_post
-from instagram_mcp.utils import parse_imginn_search_results, extract_json, Proxy, headers
+from instagram_mcp.post_parser import parse_html_post
+from instagram_mcp.utils import parse_imginn_search_results, extract_json, Proxy
 
 
 class ChallengePlatform(Enum):
@@ -142,8 +140,11 @@ class InstagramClient:
                 self._proxy = Proxy.from_url(self.proxy_url)
                 config.add_argument(f"--proxy-server={self._proxy.url}")
 
+            config.add_argument("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36")
+
             self.driver = zendriver.Browser(config)
             await self.driver.start()
+
             if self._proxy is not None:
                 await self.driver.get()
                 self.driver.main_tab.add_handler(AuthRequired, self._on_auth_required)
@@ -260,38 +261,6 @@ class InstagramClient:
                 "success": True,
                 "data": parse_html_post(html)
             }
-            # # 使用 noble_tls 直接请求 Instagram 帖子页面
-            # session = Session(client=Client.CHROME_133, random_tls_extension_order=True)
-            # response = await session.get(
-            #     "https://www.instagram.com/graphql/query",
-            #     headers=headers,
-            #     params={
-            #         "variables": json.dumps({"shortcode": post_shortcode}, separators=(',', ':')),
-            #         "doc_id": "8845758582119845",
-            #         "server_timestamps": "true"
-            #     },
-            #     proxy=self.proxy_url
-            # )
-            # html = response.json()
-            # if html.get("status") != "ok":
-            #     print(html)
-            #     print("从ins直接获取post详情失败, 转为imginn获取")
-            #     if not self.driver:
-            #         await self.init_cookie()
-            #
-            #     await self.driver.get(self.base_url + "/p/" + post_shortcode + "/")
-            #     await self.driver.main_tab.wait_for_ready_state("interactive")
-            #     await self.solve()
-            #     html = await self.driver.main_tab.get_content()
-            #     return {
-            #         "success": True,
-            #         "data": parse_html_post(html)
-            #     }
-            # else:
-            #     return {
-            #         "success": True,
-            #         "data": parse_json_post(html)
-            #     }
         except Exception as e:
             print(f"获取post详情失败: {e}")
             return {
@@ -304,3 +273,19 @@ class InstagramClient:
             await self.driver.cookies.clear()
             await self.driver.stop()
             self.driver = None
+
+
+async def main():
+    client = InstagramClient("http://127.0.0.1:7890", True)
+
+    try:
+        await client.init_cookie()
+        input("NEXT")
+        await client.close()
+        return
+    finally:
+        await client.close()
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
