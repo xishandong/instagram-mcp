@@ -14,6 +14,7 @@ def parse_html_post(html_content: str) -> Dict[str, Any]:
     """
     Parse HTML post content and extract normalized fields.
     Specifically designed for imginn.com Instagram post pages.
+    Supports carousel posts with mixed images and videos.
     """
     soup = BeautifulSoup(html_content, 'html.parser')
 
@@ -23,41 +24,63 @@ def parse_html_post(html_content: str) -> Dict[str, Any]:
     if canonical and canonical.get('href'):
         post_url = canonical['href']
 
-    # Extract images and video
+    # Extract images and videos from all slides
     images = []
-    video_url = None
+    videos = []
 
     show_div = soup.find('div', class_='show')
     if show_div:
-        # Check if it's a video post (has video tag)
-        video_tag = show_div.find('video')
-        if video_tag:
-            video_url = video_tag.get('src') or video_tag.get('data-src')
-            if video_url:
-                if video_url.startswith('//'):
-                    video_url = 'https:' + video_url
-                elif video_url.startswith('/') and post_url:
-                    from urllib.parse import urljoin
-                    video_url = urljoin(post_url, video_url)
+        # Check for swiper-container (carousel/multi-media post)
+        swiper_container = show_div.find('div', class_='swiper-container')
+        if swiper_container:
+            # Multi-media carousel post
+            swiper_slides = swiper_container.find_all('div', class_='swiper-slide')
+            for slide in swiper_slides:
+                # Check if this slide contains a video
+                media_wrap = slide.find('div', class_='media-wrap')
+                if not media_wrap:
+                    continue
+
+                # Check for video tag
+                video_tag = media_wrap.find('video')
+                if video_tag:
+                    # This is a video slide
+                    video_src = video_tag.get('src')
+                    if video_src:
+                        if video_src.startswith('//'):
+                            video_src = 'https:' + video_src
+                        elif video_src.startswith('/') and post_url:
+                            from urllib.parse import urljoin
+                            video_src = urljoin(post_url, video_src)
+                        videos.append(video_src)
+                else:
+                    # This is an image slide
+                    img_tag = media_wrap.find('img')
+                    if img_tag:
+                        # Try data-src first (lazy loaded), then src
+                        src = img_tag.get('data-src') or img_tag.get('src')
+                        if src and 'base64' not in str(src) and 'lazy.jpg' not in src:
+                            images.append(src)
         else:
-            # It's an image post
-            # Case 1: Multi-image post with swiper-container
-            swiper_container = show_div.find('div', class_='swiper-container')
-            if swiper_container:
-                swiper_slides = swiper_container.find_all('div', class_='swiper-slide')
-                for slide in swiper_slides:
-                    data_src = slide.get('data-src')
-                    if data_src and 'base64' not in str(data_src):
-                        # Clean up the URL (remove HTML entities)
-                        clean_url = data_src.replace('&#38;', '&')
-                        images.append(clean_url)
-            # Case 2: Single-image post with direct img tag in media-wrap
+            # Single media post (image or video)
+            video_tag = show_div.find('video')
+            if video_tag:
+                # Single video post
+                video_src = video_tag.get('src') or video_tag.get('data-src')
+                if video_src:
+                    if video_src.startswith('//'):
+                        video_src = 'https:' + video_src
+                    elif video_src.startswith('/') and post_url:
+                        from urllib.parse import urljoin
+                        video_src = urljoin(post_url, video_src)
+                    videos.append(video_src)
             else:
+                # Single image post
                 media_wrap = show_div.find('div', class_='media-wrap')
                 if media_wrap:
                     img_tag = media_wrap.find('img')
                     if img_tag:
-                        src = img_tag.get('src')
+                        src = img_tag.get('data-src') or img_tag.get('src')
                         if src and 'base64' not in str(src) and 'lazy.jpg' not in src:
                             images.append(src)
 
@@ -169,14 +192,14 @@ def parse_html_post(html_content: str) -> Dict[str, Any]:
     return {
         "post_url": post_url,
         "images": images,
-        "video_url": video_url,
+        "videos": videos,
         "likes": likes,
         "comments": comments,
         "user_info": user_info,
         "tagged_users": tagged_users,
         "post_content": post_content,
         "timestamp": timestamp,
-        "post_type": "video" if video_url else "image" if images else "unknown"
+        "post_type": "carousel" if (images and videos) else "video" if videos else "image" if images else "unknown"
     }
 
 
