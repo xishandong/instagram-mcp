@@ -152,41 +152,14 @@ def parse_imginn_search_results(html_content):
 
 def extract_json(html_content):
     """从 HTML 内容中提取 JSON 数据"""
-    import re
-    
     soup = BeautifulSoup(html_content, "html.parser")
 
-    # 1. 首先尝试从 <pre> 标签中提取（用于 imginn API）
+    # 首先尝试从 <pre> 标签中提取（用于 imginn API）
     json_script = soup.find('pre')
     if json_script:
         json_text = json_script.text
-        try:
-            json_data = json.loads(json_text)
-            return json_data
-        except json.JSONDecodeError:
-            pass
-
-    # 2. 尝试从 body 中直接提取 JSON 数组（imginn 的 posts API 返回格式）
-    body_text = soup.get_text(strip=True)
-    if body_text.startswith('[') or body_text.startswith('{'):
-        try:
-            return json.loads(body_text)
-        except json.JSONDecodeError:
-            pass
-
-    # 3. 尝试用正则提取 JSON 数组
-    json_match = re.search(r'\[\{.*?\}\]', html_content, re.DOTALL)
-    if json_match:
-        try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
-            pass
-
-    # 4. 如果内容本身就是 JSON（没有 HTML 包装）
-    if html_content.strip().startswith('[') or html_content.strip().startswith('{'):
-        try:
-            return json.loads(html_content)
-        except json.JSONDecodeError:
-            pass
+        json_data = json.loads(json_text)
+        return json_data
 
     return None
+
