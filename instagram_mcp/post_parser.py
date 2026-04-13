@@ -195,3 +195,4 @@ def parse_html_post(html_content: str) -> Dict[str, Any]:
         "timestamp": timestamp,
         "post_type": "carousel" if (images and videos) else "video" if videos else "image" if images else "unknown"
     }
+
