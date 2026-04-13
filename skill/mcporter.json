@@ -1,90 +1,90 @@
 {
   "name": "instagram-mcp",
-  "version": "1.0.0",
-  "description": "Instagram MCP service for OpenClaw integration",
-  "author": "Instagram MCP Team",
+  "version": "1.1.0",
+  "description": "Instagram MCP 服务 - 通过 imginn.com 访问 Instagram 公开数据",
+  "author": "xishandong",
   "license": "MIT",
   "mcp": {
     "name": "instagram-mcp",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "endpoint": "http://127.0.0.1:8000/sse",
     "health_check": "http://127.0.0.1:8000/health"
   },
   "tools": [
     {
       "name": "configure",
-      "description": "Configure proxy and browser settings",
+      "description": "配置 Instagram MCP 的代理和浏览器设置",
       "command": "mcporter call configure",
       "parameters": {
         "proxy_url": {
           "type": "string",
           "required": true,
-          "description": "Proxy URL (e.g., http://127.0.0.1:7890)"
+          "description": "代理 URL（例如：http://127.0.0.1:7890 或 http://user:pass@proxy.com:port）"
         },
         "headless": {
           "type": "boolean",
           "required": false,
           "default": true,
-          "description": "Enable headless mode (true=no GUI, false=show browser)"
+          "description": "是否启用无头模式（true=无界面，false=显示浏览器窗口）"
         }
       }
     },
     {
       "name": "search_users",
-      "description": "Search Instagram users by username or name",
+      "description": "搜索 Instagram 用户",
       "command": "mcporter call search_users",
       "parameters": {
         "query": {
           "type": "string",
           "required": true,
-          "description": "Username or full name to search for"
+          "description": "用户名或全名"
         }
       }
     },
     {
       "name": "get_user_profile",
-      "description": "Get profile information about a specific Instagram user",
+      "description": "获取 Instagram 用户详细资料",
       "command": "mcporter call get_user_profile",
       "parameters": {
         "username": {
           "type": "string",
           "required": true,
-          "description": "Instagram username"
+          "description": "Instagram 用户名（不含 @）"
         }
       }
     },
     {
       "name": "get_user_posts",
-      "description": "Get posts from a specific Instagram user with pagination support",
+      "description": "获取用户帖子列表（支持分页）",
       "command": "mcporter call get_user_posts",
       "parameters": {
         "_id": {
           "type": "string",
           "required": true,
-          "description": "User ID from get_user_profile"
+          "description": "用户 ID（从 get_user_profile 获取）"
         },
         "cursor": {
           "type": "string",
           "required": false,
-          "description": "Cursor from previous posts request for pagination"
+          "description": "分页游标（从上一次请求获取，用于获取下一页）"
         }
       }
     },
     {
-      "name": "get_post_details",
-      "description": "Get detailed information about a specific Instagram post",
-      "command": "mcporter call get_post_details",
+      "name": "get_post_detail",
+      "description": "获取帖子详细信息",
+      "command": "mcporter call get_post_detail",
       "parameters": {
         "post_shortcode": {
           "type": "string",
           "required": true,
-          "description": "Post shortcode (the part after /p/ in URL)"
+          "description": "帖子短代码（URL 中 /p/ 后的部分，例如 C1234567890）"
         }
       }
     },
     {
       "name": "close_browser",
-      "description": "Manually close the browser instance to free up resources",
+      "description": "手动关闭浏览器实例以释放资源",
       "command": "mcporter call close_browser",
       "parameters": {}
     }
@@ -95,15 +95,45 @@
       "uvicorn>=0.24.0",
       "starlette>=0.27.0",
       "zendriver>=0.5.0,<1.0.0",
-      "noble-tls>=0.1.0",
-      "beautifulsoup4>=4.12.0"
+      "beautifulsoup4>=4.12.0",
+      "loguru>=0.5.3"
     ],
     "setup_command": "pip install -r requirements.txt",
-    "start_command": "python -m instagram_mcp.server"
+    "start_command": "python -m instagram_mcp.server",
+    "docker_command": "docker-compose up -d"
   },
   "configuration": {
     "config_file": "~/.instagram-mcp/config.json",
-    "environment_variables": [],
+    "environment_variables": [
+      "HTTP_PROXY",
+      "HTTPS_PROXY"
+    ],
     "required_settings": ["proxy_url"]
+  },
+  "examples": {
+    "search_user": {
+      "tool": "search_users",
+      "parameters": {
+        "query": "jennie"
+      }
+    },
+    "get_profile": {
+      "tool": "get_user_profile",
+      "parameters": {
+        "username": "jennierubyjane"
+      }
+    },
+    "get_posts": {
+      "tool": "get_user_posts",
+      "parameters": {
+        "_id": "7140177628"
+      }
+    },
+    "get_post_detail": {
+      "tool": "get_post_detail",
+      "parameters": {
+        "post_shortcode": "DW9z9S7ksBb"
+      }
+    }
   }
 }

@@ -203,7 +203,9 @@ def create_server():
 
             elif name == "get_user_posts":
                 print("call_tool", name, arguments)
-                result = await client.get_user_posts(arguments.get("_id"), arguments.get("cursor"))
+                # Support both "_id" and "pk" (imginn returns "pk" as user ID)
+                user_id = arguments.get("_id") or arguments.get("pk")
+                result = await client.get_user_posts(user_id, arguments.get("cursor"))
                 return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
             elif name == "get_post_detail":
