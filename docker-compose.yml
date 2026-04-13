@@ -1,47 +1,23 @@
-version: '3.8'
-
 services:
   instagram-mcp:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: instagram-mcp
     restart: unless-stopped
     ports:
       - "8000:8000"
+    # Persist config (proxy/headless/server.host/port) and any future state.
     volumes:
-      # 持久化配置
       - ./data/instagram-mcp:/root/.instagram-mcp
-      # 持久化用户数据（可选）
-      - ./user_data:/app/user_data
+      - ./user_data:/root/.openclaw/workspace/instagram-mcp/user_data
     environment:
-      # 时区设置
+      # Keep timezone consistent for logs (optional)
       - TZ=Asia/Shanghai
-      # 代理配置（可选）
-      # - HTTP_PROXY=http://host.docker.internal:1087
-      # - HTTPS_PROXY=http://host.docker.internal:1087
-    # Docker 网络设置，允许访问宿主机
+    # 允许访问宿主机网络（用于代理）
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    # 健康检查
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    # 资源限制
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-    # 日志配置
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
