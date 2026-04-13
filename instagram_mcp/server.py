@@ -4,6 +4,7 @@ import json
 import sys
 from pathlib import Path
 
+from loguru import logger
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -40,7 +41,7 @@ def load_config():
                 # Merge with default config
                 default_config.update(user_config)
         except Exception as e:
-            print(f"Warning: Failed to load config file, using defaults: {e}", file=sys.stderr)
+            logger.error(f"Warning: Failed to load config file, using defaults: {e}")
 
     return default_config
 
@@ -55,7 +56,7 @@ def save_config(config):
             json.dump(config, f, indent=2, ensure_ascii=False)
         return True
     except Exception as e:
-        print(f"Error saving config: {e}", file=sys.stderr)
+        logger.error(f"Error saving config: {e}")
         return False
 
 
@@ -114,10 +115,12 @@ def create_server():
     async def call_tool(name: str, arguments: dict):
         """Handle tool calls"""
         nonlocal init_proxy, init_headless
+        
+        logger.info(f"call_tool {name} {arguments}")
+
         try:
             # Handle initial configuration
             if name == "configure":
-                print("call_tool", name, arguments)
                 proxy_url = arguments.get("proxy_url", "")
                 headless = arguments.get("headless", True)
 
@@ -146,7 +149,6 @@ def create_server():
             # Handle manual browser close
             if name == "close_browser":
                 try:
-                    print("call_tool", name, arguments)
                     await client.close()
                     return [TextContent(
                         type="text",
@@ -164,24 +166,12 @@ def create_server():
                         }, ensure_ascii=False, indent=2)
                     )]
 
-            proxy_configured = check_proxy_configured()
-            # Check if proxy is configured for Instagram tools
-            if not proxy_configured:
-                return [TextContent(
-                    type="text",
-                    text=json.dumps({
-                        "success": False,
-                        "error": "Proxy not configured. Please use the 'configure' tool first to set up your proxy settings.",
-                        "message": "Instagram access requires a proxy to work properly. Please configure your proxy settings."
-                    }, ensure_ascii=False, indent=2)
-                )]
-
             config = load_config()
             proxy = config.get("proxy", {}).get("url", "")
             headless = config.get("browser", {}).get("headless", True)
 
             if proxy != init_proxy or headless != init_headless:
-                print("用户配置了代理，重新初始化浏览器")
+                logger.warning("用户配置了代理，重新初始化浏览器")
                 await client.close()
                 client.headless = headless
                 client.proxy_url = proxy
@@ -190,33 +180,25 @@ def create_server():
 
             # Handle Instagram tools
             if name == "search_users":
-                print("call_tool", name, arguments)
                 result = await client.search_user(arguments.get("query"))
                 return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
             elif name == "get_user_profile":
-                print("call_tool", name, arguments)
                 result = await client.get_profile(
                     arguments.get("username"),
                 )
                 return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
             elif name == "get_user_posts":
-                print("call_tool", name, arguments)
-                # Support both "_id" and "pk" (imginn returns "pk" as user ID)
-                user_id = arguments.get("_id") or arguments.get("pk")
-                result = await client.get_user_posts(user_id, arguments.get("cursor"))
+                result = await client.get_user_posts(arguments.get("_id"), arguments.get("cursor"))
                 return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
             elif name == "get_post_detail":
-                print("call_tool", name, arguments)
                 result = await client.get_post_detail(arguments.get("post_shortcode"))
                 return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
             else:
-                print("call_tool", name, arguments)
                 return [TextContent(type="text", text=f"Unknown tool: {name}")]
-
         except Exception as e:
             error_result = {"error": str(e), "tool": name}
             return [TextContent(type="text", text=json.dumps(error_result, ensure_ascii=False, indent=2))]
@@ -273,9 +255,10 @@ async def main():
         await server_uvicorn.serve()
     finally:
         # Ensure browser is closed when server shuts down
-        print("Shutting down, closing browser...", file=sys.stderr)
+        logger.info("Shutting down, closing browser...")
         await client.close()
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+
