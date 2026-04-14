@@ -1,0 +1,12 @@
+{
+  "proxy": {
+    "url": "http://127.0.0.1:1087"
+  },
+  "browser": {
+    "headless": true
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8000
+  }
+}
